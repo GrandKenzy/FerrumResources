@@ -17,6 +17,7 @@ import windows_activation
 import firewall_manager
 import network_tools
 import processes
+import admin_helper
 
 def print_banner():
     print(r"""
@@ -142,13 +143,23 @@ def handle_scanner(args):
             print(json.dumps(vt_res, indent=2))
 
 def handle_ui(args):
-    """Open the Flask web UI from the installed CLI."""
+    """Open the Flask web UI from the installed CLI.
+
+    Use `spv ui` for normal mode and `spv ui --admin` to request UAC
+    before the Flask server starts. The in-app "Ejecutar como Admin" button
+    uses the same robust elevation resolver from admin_helper.py.
+    """
     if args.host:
         os.environ["SPV_HOST"] = args.host
     if args.port:
         os.environ["SPV_PORT"] = str(args.port)
     if args.debug:
         os.environ["SPV_DEBUG"] = "true"
+
+    if getattr(args, "admin", False) and not admin_helper.is_admin():
+        result = admin_helper.ensure_admin_or_relaunch()
+        print(result.get("message", result))
+        return
 
     import app as spv_app
     spv_app.main(open_browser=not args.no_browser, debug=args.debug)

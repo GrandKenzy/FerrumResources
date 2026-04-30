@@ -23,7 +23,7 @@ py_files = [os.path.splitext(f)[0] for f in glob.glob("*.py") if f != "setup.py"
 
 setup(
     name="spv",
-    version="3.1.0",
+    version="3.1.1",
     description="System Process Viewer & Optimizer",
     author="Kentucky",
     py_modules=py_files,
@@ -31,6 +31,7 @@ setup(
     data_files=[
         *collect_data_files("templates"),
         *collect_data_files("static"),
+        *collect_data_files("data"),
     ],
     install_requires=[
         "Flask",
@@ -39,9 +40,9 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            # CLI principal
+            # CLI principal. La UI se abre con: spv ui
             "spv=cli:main",
-            # Acceso directo alternativo a la UI
+            # Acceso directo alternativo a la UI.
             "spv-ui=app:main",
         ],
     },

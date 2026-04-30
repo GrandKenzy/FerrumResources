@@ -135,7 +135,7 @@ async function apiCall(url, method = 'GET', body = null) {
         let errMsg = `Error ${response.status}`;
         if (contentType.includes("application/json")) {
             const data = await response.json();
-            errMsg = data.error || errMsg;
+            errMsg = data.error || data.message || errMsg;
         } else {
             errMsg = `Error ${response.status}: El servidor no devolvió JSON.`;
         }
@@ -284,11 +284,15 @@ async function checkAdminStatus() {
 async function elevateAdmin() {
     showModal('Elevar Privilegios', '¿Deseas reiniciar la aplicación como Administrador? (Aparecerá el prompt de UAC)', null, async () => {
         try {
-            await apiCall('/api/admin/elevate', 'POST');
-            showToast('Reiniciando como administrador...', 'info');
-            setTimeout(() => location.reload(), 3000);
+            const res = await apiCall('/api/admin/elevate', 'POST');
+            if (res.ok) {
+                showToast(res.message || 'Reiniciando como administrador...', 'info');
+                setTimeout(() => location.reload(), 4500);
+            } else {
+                showToast(res.message || 'No se pudo elevar privilegios.', 'error');
+            }
         } catch (e) {
-            showToast('Error al elevar privilegios', 'error');
+            showToast(e.message || 'Error al elevar privilegios', 'error');
         }
     });
 }

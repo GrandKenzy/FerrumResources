@@ -1,37 +1,22 @@
 # SystemChecker / SPV
 
-**SPV** significa **System Process Viewer**. Es una herramienta local en Python con CLI y una interfaz web en Flask para revisar procesos, rendimiento, red, discos, puertos, limpieza, reportes y utilidades del sistema.
+**SystemChecker / SPV** es una herramienta en Python para visualizar, revisar y optimizar información del sistema y procesos. El paquete se instala como `spv`.
 
-Este proyecto vive dentro del repositorio **FerrumResources**, en la subcarpeta `systemchecker`, pero el paquete que instala `pip` se llama **`spv`**.
-
----
-
-## Nombres importantes
-
-| Concepto | Nombre |
-|---|---|
-| Repositorio GitHub | `FerrumResources` |
-| Subcarpeta del proyecto | `systemchecker` |
-| Archivo de instalación | `systemchecker/setup.py` |
-| Nombre del paquete en pip | `spv` |
-| Comando CLI principal | `spv` |
-| Comando para abrir la UI Flask | `spv ui` |
-| Comando alternativo para abrir la UI | `spv-ui` |
-| Versión actual | `3.1.0` |
-
-> Importante: `systemchecker` es la carpeta del proyecto dentro del repositorio. El paquete instalado por `pip` es `spv`.
+> Repositorio: `https://github.com/GrandKenzy/FerrumResources`  
+> Subcarpeta del paquete: `systemchecker`  
+> Nombre del paquete pip: `spv`  
+> Comando principal: `spv`
 
 ---
 
 ## Requisitos
 
-Necesitas tener instalado:
-
 - Python 3.9 o superior.
-- `pip`.
-- `git`.
+- `pip` actualizado.
+- `git` instalado.
+- Windows recomendado para funciones avanzadas de administración, procesos, drivers, firewall y UAC.
 
-Verifica las versiones:
+Comprueba tus versiones:
 
 ```bash
 python --version
@@ -49,13 +34,13 @@ python -m pip install --upgrade pip
 
 ## Instalación desde GitHub con pip
 
-Como `setup.py` está dentro de `systemchecker`, debes instalar usando `#subdirectory=systemchecker`:
+Como `setup.py` está dentro de `systemchecker`, instala usando `#subdirectory=systemchecker`.
 
 ```bash
 python -m pip install "git+https://github.com/GrandKenzy/FerrumResources.git@main#subdirectory=systemchecker"
 ```
 
-En Windows PowerShell es igual:
+En Windows PowerShell:
 
 ```powershell
 python -m pip install "git+https://github.com/GrandKenzy/FerrumResources.git@main#subdirectory=systemchecker"
@@ -63,104 +48,7 @@ python -m pip install "git+https://github.com/GrandKenzy/FerrumResources.git@mai
 
 ---
 
-## Abrir la interfaz web Flask
-
-Después de instalar, abre la UI con:
-
-```bash
-spv ui
-```
-
-También existe un comando alternativo directo:
-
-```bash
-spv-ui
-```
-
-Por defecto la aplicación abre en:
-
-```text
-http://127.0.0.1:5057
-```
-
-Si no abre el navegador automáticamente, entra manualmente a esa URL.
-
----
-
-## Cambiar host o puerto de la UI
-
-Puedes usar argumentos:
-
-```bash
-spv ui --host 127.0.0.1 --port 5060
-```
-
-O variables de entorno.
-
-PowerShell:
-
-```powershell
-$env:SPV_PORT="5060"
-spv ui
-```
-
-CMD:
-
-```cmd
-set SPV_PORT=5060
-spv ui
-```
-
-Después abre:
-
-```text
-http://127.0.0.1:5060
-```
-
----
-
-## Usar el CLI
-
-Para ver la ayuda general:
-
-```bash
-spv --help
-```
-
-Ejemplos:
-
-```bash
-spv health
-spv disk --list
-spv network --stats
-spv programs --list
-spv drivers --list
-```
-
----
-
-## Verificar instalación
-
-```bash
-python -m pip show spv
-```
-
-Ver archivos instalados:
-
-```bash
-python -m pip show -f spv
-```
-
-En Windows puedes localizar el ejecutable así:
-
-```powershell
-where spv
-where spv-ui
-```
-
----
-
-## Actualizar o reinstalar desde GitHub
+## Reinstalar o actualizar
 
 ```bash
 python -m pip install --upgrade --force-reinstall "git+https://github.com/GrandKenzy/FerrumResources.git@main#subdirectory=systemchecker"
@@ -172,25 +60,137 @@ python -m pip install --upgrade --force-reinstall "git+https://github.com/GrandK
 
 ```bash
 git clone https://github.com/GrandKenzy/FerrumResources.git
-cd FerrumResources/systemchecker
-python -m pip install -e .
-spv ui
+cd FerrumResources
+python -m pip install -e ./systemchecker
 ```
 
 En Windows PowerShell:
 
 ```powershell
 git clone https://github.com/GrandKenzy/FerrumResources.git
-cd FerrumResources\systemchecker
-python -m pip install -e .
-spv ui
+cd FerrumResources
+python -m pip install -e .\systemchecker
 ```
-
-La opción `-e` instala el paquete en modo editable. Los cambios del código se reflejan sin reinstalar cada vez.
 
 ---
 
-## Dependencias principales
+## Uso básico
+
+Ver ayuda:
+
+```bash
+spv --help
+```
+
+Ver información del paquete instalado:
+
+```bash
+python -m pip show spv
+```
+
+---
+
+## Abrir la UI Flask
+
+La interfaz web se abre con:
+
+```bash
+spv ui
+```
+
+Por defecto abre:
+
+```text
+http://127.0.0.1:5057
+```
+
+También existe el acceso directo alternativo:
+
+```bash
+spv-ui
+```
+
+---
+
+## Abrir la UI en otro puerto
+
+```bash
+spv ui --port 5060
+```
+
+Luego abre:
+
+```text
+http://127.0.0.1:5060
+```
+
+---
+
+## Abrir sin navegador automático
+
+```bash
+spv ui --no-browser
+```
+
+---
+
+## Abrir con debug de Flask
+
+```bash
+spv ui --debug
+```
+
+---
+
+## Abrir directamente como Administrador
+
+En Windows, puedes pedir UAC desde la terminal:
+
+```powershell
+spv ui --admin
+```
+
+También puedes abrir normal:
+
+```powershell
+spv ui
+```
+
+Y luego usar el botón de la UI:
+
+```text
+Ejecutar como Admin
+```
+
+El elevador detecta el modo correcto de arranque:
+
+- `spv ui`
+- `spv-ui`
+- `python app.py`
+- `python -m app`
+- instalación editable
+- instalación normal con pip
+
+Si la UI se reinicia con permisos elevados, la instancia no elevada se cierra automáticamente para liberar el puerto.
+
+---
+
+## Comandos CLI incluidos
+
+```bash
+spv disk --list
+spv health
+spv network --firewall
+spv network --stats
+spv os --recommend
+spv programs --list
+spv drivers --list
+spv scanner --file RUTA_DEL_ARCHIVO
+```
+
+---
+
+## Dependencias
 
 El paquete instala automáticamente:
 
@@ -202,50 +202,63 @@ El paquete instala automáticamente:
 
 ## Solución de problemas
 
-### Error: `TemplateNotFound: dashboard.html`
+### `TemplateNotFound: dashboard.html` o `TemplateNotFound: base.html`
 
-Este error indica que Flask arrancó correctamente, pero `pip` no instaló las carpetas de UI:
-
-```text
-templates/
-static/
-```
-
-La solución es que el paquete incluya esos archivos en `setup.py` y `MANIFEST.in`.
-
-Reinstala después de subir el parche:
+Reinstala usando la versión que incluye `MANIFEST.in`, `templates/` y `static/`:
 
 ```bash
 python -m pip install --upgrade --force-reinstall "git+https://github.com/GrandKenzy/FerrumResources.git@main#subdirectory=systemchecker"
 ```
 
-Luego abre:
+El paquete debe incluir:
+
+```text
+templates/
+static/
+MANIFEST.in
+```
+
+### `spv` no se reconoce como comando
+
+Verifica la instalación:
 
 ```bash
+python -m pip show spv
+```
+
+En Windows, revisa que la carpeta `Scripts` de Python esté en el `PATH`.
+
+También puedes probar:
+
+```bash
+python -m pip show -f spv
+```
+
+### Error al elevar permisos / UAC
+
+Usa:
+
+```powershell
+spv ui --admin
+```
+
+O abre normal:
+
+```powershell
 spv ui
 ```
 
-### Error: `git` no se reconoce como comando
+y pulsa **Ejecutar como Admin** dentro de la UI.
 
-Instala Git desde:
+Si UAC se cancela, Windows devuelve acceso denegado. Si el puerto queda ocupado, cierra la terminal anterior o cambia de puerto:
 
-```text
-https://git-scm.com/downloads
+```powershell
+spv ui --port 5060 --admin
 ```
 
-Después cierra y abre la terminal nuevamente.
+### `No module named systemchecker`
 
-### Error: `does not appear to be a Python project`
-
-Usa el comando con `#subdirectory=systemchecker`:
-
-```bash
-python -m pip install "git+https://github.com/GrandKenzy/FerrumResources.git@main#subdirectory=systemchecker"
-```
-
-### Error: `No module named systemchecker`
-
-El paquete instalado se llama `spv`, no `systemchecker`.
+El paquete instalado se llama `spv`; `systemchecker` es la subcarpeta del repositorio, no necesariamente el nombre importable del módulo.
 
 Correcto:
 
@@ -254,24 +267,29 @@ python -m pip show spv
 spv ui
 ```
 
-Incorrecto:
+---
 
-```python
-import systemchecker
-```
-
-### El comando `spv` no aparece
-
-Verifica que Python Scripts esté en el `PATH`. En Windows, normalmente es una ruta parecida a:
+## Estructura esperada
 
 ```text
-C:\Users\TU_USUARIO\AppData\Local\Programs\Python\Python313\Scripts
+FerrumResources/
+└── systemchecker/
+    ├── setup.py
+    ├── MANIFEST.in
+    ├── README.md
+    ├── app.py
+    ├── cli.py
+    ├── admin_helper.py
+    ├── templates/
+    ├── static/
+    └── otros_archivos.py
 ```
 
-También puedes ejecutar:
+El `setup.py` registra:
 
-```bash
-python -m pip show spv
+```text
+spv=cli:main
+spv-ui=app:main
 ```
 
 ---

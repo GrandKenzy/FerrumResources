@@ -726,13 +726,13 @@ def scanner_page():
 
 @app.route('/api/admin/status')
 def api_admin_status():
-    return jsonify({"is_admin": admin_helper.is_admin()})
+    return jsonify(admin_helper.get_admin_status())
 
 @app.route('/api/admin/elevate', methods=['POST'])
 def api_admin_elevate():
     security.require_csrf()
-    result = admin_helper.restart_as_admin()
-    return jsonify(result)
+    result = admin_helper.restart_as_admin(exit_current=True, exit_delay=1.5)
+    return jsonify(result), (200 if result.get("ok") else 400)
 
 # -- API: OS Recommender --
 
