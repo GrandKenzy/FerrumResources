@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block page_title %}Antivirus y Análisis (VirusTotal){% endblock %}
+
+{% block content %}
+<div class="grid grid-2" style="margin-bottom:1.5rem;">
+    <!-- Local Scanner (Basic Heuristic) -->
+    <div class="card" style="border-top:3px solid var(--accent);">
+        <div class="card-title"><i class="fas fa-shield-virus"></i> Escáner Heurístico Local (Básico)</div>
+        <p style="font-size:0.85rem; color:var(--text2); margin:0.5rem 0 1rem;">Escaneo rápido sin internet buscando cadenas sospechosas y empaquetadores (solo detecta riesgos evidentes).</p>
+        
+        <div class="tabs mb-1" style="border-bottom:none; gap:0.5rem;">
+            <button class="btn btn-sm" onclick="showLocalInput('file')">Escanear Archivo</button>
+            <button class="btn btn-sm" onclick="showLocalInput('dir')">Escanear Carpeta</button>
+        </div>
+        
+        <div id="local-file-input" class="form-group">
+            <label>Ruta del archivo (.exe, .bat, etc.)</label>
+            <input type="text" id="local-path-file" placeholder="C:\Ruta\al\archivo.exe">
+            <button class="btn btn-primary mt-1" onclick="scanLocal('file')"><i class="fas fa-search"></i> Analizar Archivo</button>
+        </div>
+        
+        <div id="local-dir-input" class="form-group" style="display:none;">
+            <label>Ruta de la carpeta (Máx 200 archivos)</label>
+            <input type="text" id="local-path-dir" placeholder="C:\Ruta\a\la\carpeta">
+            <button class="btn btn-primary mt-1" onclick="scanLocal('dir')"><i class="fas fa-search"></i> Analizar Carpeta</button>
+        </div>
+    </div>
+
+    <!-- VirusTotal Scanner -->
+    <div class="card" style="border-top:3px solid #3b82f6;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div class="card-title" style="color:#3b82f6;"><i class="fas fa-cloud-arrow-up"></i> VirusTotal Scanner</div>
+            <span class="badge {{ 'badge-success' if has_vt_key else 'badge-danger' }}">{{ 'API Key OK' if has_vt_key else 'Falta API Key' }}</span>
+        </div>
+        
+        {% if not has_vt_key %}
+        <div class="mt-1 mb-1 p-1" style="background:rgba(239,68,68,0.1); border-radius:var(--radius-sm); font-size:0.8rem; color:var(--danger);">
+            Para usar esta función necesitas configurar tu VT_API_KEY en los <a href="{{ url_for('settings_page') }}" style="color:var(--danger); text-decoration:underline;">Settings</a>.
+        </div>
+        {% endif %}
+        
+        <p style="font-size:0.85rem; color:var(--text2); margin:0.5rem 0 1rem;">Sube un archivo, escanea una URL o busca por HASH usando los motores de VirusTotal.</p>
+        
+        <div class="tabs mb-1" style="border-bottom:none; gap:0.5rem;">
+            <button class="btn btn-sm" onclick="showVTInput('file')" {{ 'disabled' if not has_vt_key else '' }}>Archivo</button>
+            <button class="btn btn-sm" onclick="showVTInput('url')" {{ 'disabled' if not has_vt_key else '' }}>URL</button>
+            <button class="btn btn-sm" onclick="showVTInput('hash')" {{ 'disabled' if not has_vt_key else '' }}>Hash</button>
+        </div>
+        
+        <div id="vt-file-input" class="form-group">
+            <label>Ruta del archivo (Máx 32MB)</label>
+            <input type="text" id="vt-path-file" placeholder="C:\Ruta\al\archivo.exe" {{ 'disabled' if not has_vt_key else '' }}>
+            <button class="btn btn-primary mt-1" onclick="scanVT('file')" {{ 'disabled' if not has_vt_key else '' }}><i class="fas fa-cloud-upload-alt"></i> Subir a VT</button>
+        </div>
+        
+        <div id="vt-url-input" class="form-group" style="display:none;">
+            <label>URL a escanear</label>
+            <input type="text" id="vt-path-url" placeholder="https://ejemplo.com" {{ 'disabled' if not has_vt_key else '' }}>
+            <button class="btn btn-primary mt-1" onclick="scanVT('url')" {{ 'disabled' if not has_vt_key else '' }}><i class="fas fa-globe"></i> Escanear URL</button>
+        </div>
+        
+        <div id="vt-hash-input" class="form-group" style="display:none;">
+            <label>Hash SHA-256</label>
+            <input type="text" id="vt-path-hash" placeholder="Ej: a1b2c3d4..." {{ 'disabled' if not has_vt_key else '' }}>
+            <button class="btn btn-primary mt-1" onclick="scanVT('hash')" {{ 'disabled' if not has_vt_key else '' }}><i class="fas fa-hashtag"></i> Buscar Hash</button>
+        </div>
+    </div>
+</div>
+
+<!-- Results Area -->
+<div class="card" id="results-card" style="display:none;">
+    <div class="card-header">
+        <div class="card-title">Resultados del Análisis</div>
+        <button class="btn btn-sm" onclick="document.getElementById('results-card').style.display='none'"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <div id="scan-progress" class="progress-bar mb-2" style="display:none;">
+        <div class="progress-fill" style="width:100%; animation: pulse 1.5s infinite;"></div>
+    </div>
+    <div id="scan-status-msg" style="font-size:0.85rem; color:var(--text2); margin-bottom:1rem; display:none;">Analizando...</div>
+    
+    <div id="scan-results-content" class="console" style="min-height:200px; font-size:0.85rem; background:var(--surface2); color:var(--text); border:1px solid var(--border);"></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+</style>
+<script>
+function showLocalInput(type) {
+    document.getElementById('local-file-input').style.display = type === 'file' ? 'block' : 'none';
+    document.getElementById('local-dir-input').style.display = type === 'dir' ? 'block' : 'none';
+}
+
+function showVTInput(type) {
+    document.getElementById('vt-file-input').style.display = type === 'file' ? 'block' : 'none';
+    document.getElementById('vt-url-input').style.display = type === 'url' ? 'block' : 'none';
+    document.getElementById('vt-hash-input').style.display = type === 'hash' ? 'block' : 'none';
+}
+
+function _showResults(msg, isLoading = false) {
+    const card = document.getElementById('results-card');
+    const content = document.getElementById('scan-results-content');
+    const prog = document.getElementById('scan-progress');
+    const statusMsg = document.getElementById('scan-status-msg');
+    
+    card.style.display = 'block';
+    if(isLoading) {
+        prog.style.display = 'block';
+        statusMsg.style.display = 'block';
+        statusMsg.innerText = msg;
+        content.innerHTML = 'Esperando respuesta...';
+    } else {
+        prog.style.display = 'none';
+        statusMsg.style.display = 'none';
+        if(typeof msg === 'object') {
+            content.innerHTML = `<pre style="white-space:pre-wrap; margin:0;">${JSON.stringify(msg, null, 2)}</pre>`;
+            
+            // Format threat level if present
+            if(msg.threat_level) {
+                let color = msg.threat_level === 'LIMPIO' ? 'var(--success)' : (msg.threat_level === 'PELIGROSO' || msg.threat_level === 'ALTO' ? 'var(--danger)' : 'var(--warning)');
+                content.innerHTML = `<div style="font-size:1.2rem; font-weight:bold; color:${color}; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid var(--border);">ESTADO: ${msg.threat_level}</div>` + content.innerHTML;
+            }
+        } else {
+            content.innerHTML = msg;
+        }
+    }
+}
+
+async function scanLocal(type) {
+    if(type === 'file') {
+        const path = document.getElementById('local-path-file').value.trim();
+        if(!path) return showToast('Ingresa una ruta de archivo', 'warning');
+        _showResults('Analizando archivo localmente...', true);
+        const r = await apiCall('/api/scanner/file', 'POST', {path: path, use_vt: false});
+        _showResults(r);
+    } else {
+        const path = document.getElementById('local-path-dir').value.trim();
+        if(!path) return showToast('Ingresa un directorio', 'warning');
+        _showResults('Iniciando tarea en background para escanear directorio...', true);
+        const r = await apiCall('/api/scanner/dir', 'POST', {path: path});
+        
+        pollJob(r.job_id, (job) => {
+            _showResults(job.result);
+        });
+    }
+}
+
+async function scanVT(type) {
+    if(type === 'file') {
+        const path = document.getElementById('vt-path-file').value.trim();
+        if(!path) return showToast('Ingresa una ruta de archivo', 'warning');
+        _showResults('Subiendo/Verificando archivo en VirusTotal...', true);
+        const r = await apiCall('/api/scanner/file', 'POST', {path: path, use_vt: true});
+        _showResults(r);
+    } else if (type === 'url') {
+        const url = document.getElementById('vt-path-url').value.trim();
+        if(!url) return showToast('Ingresa una URL', 'warning');
+        _showResults('Enviando URL a VirusTotal...', true);
+        const r = await apiCall('/api/scanner/url', 'POST', {url: url});
+        _showResults(r);
+    } else if (type === 'hash') {
+        const hash = document.getElementById('vt-path-hash').value.trim();
+        if(!hash) return showToast('Ingresa un hash', 'warning');
+        _showResults('Buscando Hash en VirusTotal...', true);
+        const r = await apiCall('/api/scanner/hash', 'POST', {hash: hash});
+        _showResults(r);
+    }
+}
+</script>
+{% endblock %}

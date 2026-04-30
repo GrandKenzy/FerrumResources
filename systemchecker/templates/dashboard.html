@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block page_title %}Dashboard de Sistema{% endblock %}
+{% block active_page %}dashboard{% endblock %}
+
+{% block content %}
+<div class="grid">
+    <div class="card">
+        <div class="card-title">CPU</div>
+        <div class="card-value">{{ system.cpu.percent }}%</div>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ system.cpu.percent }}%; background: {{ 'var(--danger-color)' if system.cpu.percent > 80 else 'var(--accent-color)' }};"></div>
+        </div>
+        <p style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary);">{{ system.cpu.logical_cores }} núcleos lógicos</p>
+    </div>
+    
+    <div class="card">
+        <div class="card-title">RAM</div>
+        <div class="card-value">{{ system.memory.percent }}%</div>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ system.memory.percent }}%; background: {{ 'var(--danger-color)' if system.memory.percent > 80 else 'var(--accent-color)' }};"></div>
+        </div>
+        <p style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary);">{{ system.memory.used }} / {{ system.memory.total }}</p>
+    </div>
+    
+    <div class="card">
+        <div class="card-title">Disco (C:)</div>
+        {% set c_drive = system.disk.partitions[0] %}
+        <div class="card-value">{{ c_drive.percent }}%</div>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ c_drive.percent }}%; background: {{ 'var(--danger-color)' if c_drive.percent > 90 else 'var(--accent-color)' }};"></div>
+        </div>
+        <p style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary);">Libre: {{ c_drive.free }}</p>
+    </div>
+</div>
+
+<div class="grid" style="grid-template-columns: 2fr 1fr;">
+    <div class="table-container">
+        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 1rem;">Procesos Críticos / Sospechosos</h3>
+            <a href="{{ url_for('processes_page') }}" class="btn">Ver todos</a>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>PID</th>
+                    <th>Nombre</th>
+                    <th>CPU %</th>
+                    <th>RAM %</th>
+                    <th>Riesgo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in top_procs %}
+                <tr>
+                    <td>{{ p.pid }}</td>
+                    <td style="font-weight: 600;">{{ p.name }}</td>
+                    <td>{{ p.cpu_percent }}%</td>
+                    <td>{{ p.memory_percent }}%</td>
+                    <td><span class="badge badge-{{ p.risk_label }}">{{ p.risk_score }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div class="card">
+            <div class="card-title">Alertas Activas</div>
+            {% if alerts %}
+                {% for a in alerts %}
+                <div style="margin-bottom: 12px; font-size: 0.85rem; border-left: 3px solid {{ 'var(--danger-color)' if a.severity == 'critical' else 'var(--warning-color)' }}; padding-left: 10px;">
+                    <div style="font-weight: 600;">{{ a.process_name }}</div>
+                    <div style="color: var(--text-secondary);">{{ a.message }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--text-secondary); font-size: 0.85rem;">No hay alertas activas.</p>
+            {% endif %}
+        </div>
+        
+        <div class="card">
+            <div class="card-title">Acciones Rápidas</div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <button class="btn btn-primary" onclick="window.location='/cleanup'"><i class="fas fa-broom"></i> Limpiar Temporales</button>
+                <button class="btn" onclick="apiCall('/api/reports/generate', 'POST').then(()=>alert('Reporte generado'))"><i class="fas fa-file-export"></i> Generar Reporte</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

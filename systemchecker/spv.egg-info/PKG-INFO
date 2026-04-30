@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: spv
+Version: 3.1.0
+Summary: System Process Viewer & Optimizer
+Author: Kentucky
+Requires-Dist: Flask
+Requires-Dist: psutil
+Requires-Dist: requests
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: summary

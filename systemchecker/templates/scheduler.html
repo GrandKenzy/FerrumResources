@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block page_title %}Scheduler (Tareas Programadas){% endblock %}
+{% block active_page %}scheduler{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <p style="color: #666; font-size: 0.9rem;">El scheduler interno ejecuta tareas automáticas de mantenimiento y monitoreo.</p>
+        <button class="btn btn-primary" onclick="alert('Nueva tarea: próximamente')"><i class="fas fa-plus"></i> Nueva Tarea</button>
+    </div>
+</div>
+
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Tarea</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Intervalo</th>
+                <th>Última Ejec.</th>
+                <th>Próxima Ejec.</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td style="font-weight: 600;">{{ task.name }}</td>
+                <td><code style="font-size: 0.75rem;">{{ task.kind }}</code></td>
+                <td>
+                    <span class="badge {{ 'badge-low' if task.enabled else 'badge-high' }}">
+                        {{ 'Activo' if task.enabled else 'Pausado' }}
+                    </span>
+                </td>
+                <td>Cada {{ task.interval_minutes }} min</td>
+                <td style="font-size: 0.8rem; color: #666;">{{ task.last_run or 'Nunca' }}</td>
+                <td style="font-size: 0.8rem; color: #666;">{{ task.next_run or 'N/A' }}</td>
+                <td>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn btn-sm" onclick="runTaskNow('{{ task.id }}')" title="Ejecutar ahora"><i class="fas fa-play"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTask('{{ task.id }}')" title="Eliminar"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card" style="margin-top: 2rem;">
+    <div class="card-title">Logs de Ejecución</div>
+    <div id="scheduler-logs" style="font-family: monospace; font-size: 0.8rem; background: #f9f9f9; padding: 1rem; border-radius: 12px; max-height: 200px; overflow-y: auto;">
+        [INFO] Scheduler iniciado correctamente.<br>
+        [INFO] Tarea 'Limpieza temporal diaria' programada para la próxima ejecución.
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function runTaskNow(id) {
+    apiCall(`/api/scheduler/run/${id}`, 'POST').then(() => {
+        alert('Tarea lanzada en segundo plano.');
+        location.reload();
+    });
+}
+function deleteTask(id) {
+    showModal(
+        'Eliminar Tarea',
+        '¿Estás seguro de que deseas eliminar esta tarea programada?',
+        true,
+        (confirm) => {
+            apiCall(`/api/scheduler/delete/${id}`, 'POST', { confirm }).then(() => {
+                alert('Tarea eliminada');
+                location.reload();
+            });
+        }
+    );
+}
+</script>
+{% endblock %}

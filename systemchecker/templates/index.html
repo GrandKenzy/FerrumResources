@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ app_name }}</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <script>
+    window.SPV = {
+      csrf: "{{ csrf_token }}",
+      power: {{ "true" if power_actions_enabled else "false" }}
+    };
+  </script>
+
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">Local Task Manager</div>
+      <h1>System Process Viewer</h1>
+    </div>
+    <div class="top-actions">
+      <a class="btn ghost" href="/api/report">Exportar reporte</a>
+      <button class="btn" id="refreshNow">Actualizar</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="hero-grid">
+      <article class="card metric">
+        <span>CPU</span>
+        <strong id="cpuPct">0%</strong>
+        <canvas id="cpuChart" height="70"></canvas>
+      </article>
+      <article class="card metric">
+        <span>RAM</span>
+        <strong id="ramPct">0%</strong>
+        <canvas id="ramChart" height="70"></canvas>
+      </article>
+      <article class="card metric">
+        <span>Disco</span>
+        <strong id="diskPct">0%</strong>
+        <canvas id="diskChart" height="70"></canvas>
+      </article>
+      <article class="card metric">
+        <span>Riesgo</span>
+        <strong id="riskCount">0</strong>
+        <p class="muted">Procesos marcados como medium/high/critical</p>
+      </article>
+    </section>
+
+    <section class="split">
+      <article class="card system-card">
+        <div class="section-title">
+          <h2>Información del sistema</h2>
+          <span id="powerStatus" class="pill"></span>
+        </div>
+        <div id="systemInfo" class="kv"></div>
+        <div class="disk-list" id="diskList"></div>
+      </article>
+
+      <article class="card tools-card">
+        <div class="section-title">
+          <h2>Optimización y limpieza segura</h2>
+          <span class="pill">controlado</span>
+        </div>
+        <div class="tool-grid">
+          <label>
+            Edad mínima de temporales
+            <input id="cleanAge" type="number" min="0" max="720" value="24">
+          </label>
+          <button class="btn ghost" id="scanCleanup">Simular limpieza</button>
+          <button class="btn danger" id="runCleanup">Limpiar</button>
+          <button class="btn" id="memOptimize">Optimizar memoria segura</button>
+        </div>
+        <div class="tool-grid">
+          <label>
+            Unidad / mountpoint
+            <input id="driveInput" type="text" placeholder="C: o /">
+          </label>
+          <select id="diskMode">
+            <option value="analyze">Analizar</option>
+            <option value="optimize">Optimizar / TRIM / Defrag según SO</option>
+          </select>
+          <button class="btn danger" id="diskOptimize">Disco</button>
+        </div>
+        
+        <div class="tool-grid desktop-cleaner">
+          <label>
+            Desktop: edad mínima
+            <input id="desktopAge" type="number" min="0" max="2160" value="72">
+          </label>
+          <button class="btn ghost" id="scanDesktop">Escanear Desktop</button>
+          <button class="btn danger" id="runDesktop">Cuarentena Desktop</button>
+        </div>
+        <pre id="toolOutput" class="console">Listo.</pre>
+      </article>
+    </section>
+
+
+    <section class="card port-card">
+      <div class="section-title process-title">
+        <div>
+          <h2>Port Gestor / Port Protect</h2>
+          <p class="muted">Puertos activos en localhost, procesos propietarios, lanzamiento controlado y resolución automática de solapamientos.</p>
+        </div>
+        <div class="filters">
+          <input id="portSearch" type="search" placeholder="Buscar puerto, PID, proceso...">
+          <button class="btn ghost" id="refreshPorts">Actualizar puertos</button>
+        </div>
+      </div>
+
+      <div class="port-tools">
+        <label>Puerto preferido<input id="preferredPort" type="number" min="1" max="65535" value="5000"></label>
+        <label>Comando a lanzar<input id="launchCommand" type="text" placeholder="python app.py"></label>
+        <label>CWD opcional<input id="launchCwd" type="text" placeholder="C:\\ruta\\app o /ruta/app"></label>
+        <button class="btn" id="findFreePort">Buscar libre</button>
+        <button class="btn danger" id="launchPort">Lanzar protegido</button>
+        <button class="btn ghost" id="protectOnly">Solo proteger/resolver</button>
+      </div>
+      <div id="portNotice" class="notice hidden"></div>
+
+      <div class="table-wrap ports-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Puerto</th>
+              <th>IP</th>
+              <th>Estado</th>
+              <th>PID</th>
+              <th>Proceso</th>
+              <th>Ruta</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="portRows"></tbody>
+        </table>
+      </div>
+
+      <div class="managed-grid">
+        <div>
+          <h3>Apps lanzadas por SPV</h3>
+          <div id="managedPorts" class="jobs"></div>
+        </div>
+        <div>
+          <h3>Proxies locales</h3>
+          <div id="proxyPorts" class="jobs"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title process-title">
+        <div>
+          <h2>Procesos</h2>
+          <p class="muted">Ordenados por riesgo, CPU y RAM. Las acciones destructivas requieren confirmación.</p>
+        </div>
+        <div class="filters">
+          <input id="search" type="search" placeholder="Buscar proceso, PID, ruta, usuario...">
+          <select id="riskFilter">
+            <option value="">Todos</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Riesgo</th>
+              <th>PID</th>
+              <th>Proceso</th>
+              <th>CPU</th>
+              <th>RAM</th>
+              <th>Usuario</th>
+              <th>Estado</th>
+              <th>Conex.</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="processRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">
+        <h2>Jobs</h2>
+        <span class="pill">historial reciente</span>
+      </div>
+      <div id="jobs" class="jobs"></div>
+    </section>
+  </main>
+
+  <dialog id="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">Detalle</h3>
+      <button class="icon" id="closeModal">×</button>
+    </div>
+    <pre id="modalBody" class="modal-body"></pre>
+  </dialog>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

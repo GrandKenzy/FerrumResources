@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block page_title %}Administrador de Procesos{% endblock %}
+{% block active_page %}processes{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <i class="fas fa-search" style="color: var(--text-secondary);"></i>
+        <input type="text" id="proc-search" placeholder="Filtrar por nombre, PID o usuario..." style="margin-top: 0; border: none; padding: 0.5rem 0; background: transparent; color: var(--text-color);">
+        
+        <select id="risk-filter" style="width: auto; margin-top: 0;">
+            <option value="all">Todos los riesgos</option>
+            <option value="critical">Crítico</option>
+            <option value="high">Alto</option>
+            <option value="medium">Medio</option>
+            <option value="low">Bajo</option>
+        </select>
+        
+        <button class="btn btn-primary" onclick="refreshProcs()"><i class="fas fa-sync"></i> Actualizar</button>
+    </div>
+</div>
+
+<div class="table-container">
+    <table id="procs-table">
+        <thead>
+            <tr>
+                <th>PID</th>
+                <th>Nombre</th>
+                <th>Usuario</th>
+                <th>CPU %</th>
+                <th>RAM %</th>
+                <th>Red</th>
+                <th>Riesgo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="procs-body">
+            <tr><td colspan="8" style="text-align: center; padding: 3rem;">Cargando procesos...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function refreshProcs() {
+    const data = await apiCall('/api/processes');
+    const tbody = document.getElementById('procs-body');
+    const search = document.getElementById('proc-search').value.toLowerCase();
+    const risk = document.getElementById('risk-filter').value;
+    
+    tbody.innerHTML = '';
+    
+    data.forEach(p => {
+        if (search && !p.name.toLowerCase().includes(search) && !p.pid.toString().includes(search)) return;
+        if (risk !== 'all' && p.risk_label !== risk) return;
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${p.pid}</td>
+            <td style="font-weight: 600;">${p.name}</td>
+            <td style="color: var(--text-secondary);">${p.username}</td>
+            <td>${p.cpu_percent}%</td>
+            <td>${p.memory_percent}%</td>
+            <td>${p.connections_count}</td>
+            <td><span class="badge badge-${p.risk_label}">${p.risk_score}</span></td>
+            <td>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn btn-sm" onclick="showProcDetail(${p.pid})"><i class="fas fa-info-circle"></i></button>
+                    ${p.protected ? '' : `
+                        <button class="btn btn-sm" onclick="terminateProc(${p.pid}, '${p.name}')" title="Terminar suavemente"><i class="fas fa-stop-circle"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="killProc(${p.pid}, '${p.name}')" title="Forzar cierre"><i class="fas fa-times"></i></button>
+                    `}
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function showProcDetail(pid) {
+    apiCall(`/api/processes/${pid}`).then(data => {
+        showModal(
+            `Detalle: ${data.name} (PID ${data.pid})`,
+            `Ruta: ${data.exe || 'N/A'}\nStatus: ${data.status}\nThreads: ${data.threads}\nCMD: ${data.cmdline.join(' ')}`,
+            false,
+            () => {}
+        );
+    });
+}
+
+function terminateProc(pid, name) {
+    showModal(
+        `¿Terminar proceso ${name}?`,
+        `Se enviará una señal de terminación suave al proceso ${pid}.`,
+        true,
+        (confirm) => {
+            apiCall(`/api/processes/${pid}/terminate`, 'POST', { confirm }).then(res => {
+                alert(res.message);
+                refreshProcs();
+            });
+        }
+    );
+}
+
+function killProc(pid, name) {
+    showModal(
+        `¿Terminar proceso ${name}?`,
+        `Se enviará una señal de terminación al proceso ${pid}. Esto puede causar pérdida de datos no guardados.`,
+        true,
+        (confirm) => {
+            apiCall(`/api/processes/${pid}/kill`, 'POST', { confirm }).then(res => {
+                alert(res.message);
+                refreshProcs();
+            });
+        }
+    );
+}
+
+document.getElementById('proc-search').oninput = refreshProcs;
+document.getElementById('risk-filter').onchange = refreshProcs;
+refreshProcs();
+</script>
+{% endblock %}

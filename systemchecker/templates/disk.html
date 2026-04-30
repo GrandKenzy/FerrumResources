@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block page_title %}Gestión de Disco{% endblock %}
+
+{% block content %}
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('partitions')">Particiones</button>
+    <button class="tab-btn" onclick="switchTab('physical')">Discos Físicos</button>
+    {% if power_enabled %}
+    <button class="tab-btn" onclick="switchTab('new-part')">Nueva Partición</button>
+    {% endif %}
+</div>
+
+<!-- PARTITIONS -->
+<div id="tab-partitions" class="tab-panel active">
+    <div class="grid">
+        {% for part in system.disk.partitions %}
+        <div class="card disk-item {% if part.percent > 85 %}stat-card danger{% elif part.percent > 65 %}stat-card warning{% else %}stat-card success{% endif %}">
+            <div class="card-header">
+                <div>
+                    <div style="font-weight:700;font-size:1rem;">{{ part.device }}</div>
+                    <div style="font-size:0.78rem;color:var(--text2);">{{ part.mountpoint }} · {{ part.fstype }}</div>
+                </div>
+                <div>
+                    {% if part.is_system %}
+                    <span class="badge badge-warning"><i class="fas fa-shield-halved"></i> Sistema</span>
+                    {% else %}
+                    <span class="badge badge-neutral">Datos</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-value" style="font-size:2.5rem;">{{ part.percent }}%</div>
+            <div class="progress-bar mb-1">
+                <div class="progress-fill {% if part.percent > 85 %}danger{% elif part.percent > 65 %}warning{% endif %}" style="width:{{ part.percent }}%;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text2);margin-bottom:1rem;">
+                <span>Usado: <strong>{{ part.used }}</strong></span>
+                <span>Libre: <strong>{{ part.free }}</strong></span>
+                <span>Total: <strong>{{ part.total }}</strong></span>
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                {% if power_enabled %}
+                    <button class="btn btn-sm" onclick="cleanDisk('{{ part.mountpoint }}')">
+                        <i class="fas fa-broom"></i> Limpiar
+                    </button>
+                    <button class="btn btn-sm" onclick="defragDisk('{{ part.mountpoint }}')">
+                        <i class="fas fa-layer-group"></i> Desfrag
+                    </button>
+                    <button class="btn btn-sm btn-warning" onclick="unlockDisk('{{ part.mountpoint }}')">
+                        <i class="fas fa-unlock"></i> Desbloquear
+                    </button>
+                {% else %}
+                    <span class="badge badge-neutral"><i class="fas fa-lock"></i> Power Mode requerido</span>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card"><div style="text-align:center;padding:2rem;color:var(--text2);">Sin particiones detectadas</div></div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- PHYSICAL DISKS -->
+<div id="tab-physical" class="tab-panel">
+    <div class="card">
+        <div class="card-title">Discos Físicos Detectados</div>
+        {% if physical_disks %}
+        <div class="table-container mt-1">
+            <table>
+                <thead><tr><th>#</th><th>Modelo</th><th>Tamaño</th><th>Estado</th></tr></thead>
+                <tbody>
+                    {% for d in physical_disks %}
+                    <tr>
+                        <td>Disco {{ d.index }}</td>
+                        <td style="font-weight:600;">{{ d.model or '—' }}</td>
+                        <td>{{ d.size_gb }} GB</td>
+                        <td><span class="badge {{ 'badge-success' if d.status == 'OK' else 'badge-danger' }}">{{ d.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:2rem;color:var(--text2);">
+            <i class="fas fa-hard-drive" style="font-size:2rem;opacity:0.3;"></i>
+            <div style="margin-top:0.75rem;">Sin discos físicos detectados (requiere Windows + Admin)</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- NEW PARTITION -->
+{% if power_enabled %}
+<div id="tab-new-part" class="tab-panel">
+    <div class="card" style="max-width:600px;">
+        <div class="card-title"><i class="fas fa-plus-circle"></i> Crear Nueva Partición</div>
+        <div style="font-size:0.85rem;color:var(--text2);margin-bottom:1.5rem;line-height:1.7;">
+            Crea una nueva partición en espacio no asignado. Requiere privilegios de Administrador.
+            <br><span class="badge badge-danger"><i class="fas fa-triangle-exclamation"></i> Operación irreversible</span>
+        </div>
+        <div class="form-group">
+            <label>Número de Disco Físico</label>
+            <select id="part-disk">
+                {% for d in physical_disks %}
+                <option value="{{ d.index }}">Disco {{ d.index }} — {{ d.model }} ({{ d.size_gb }} GB)</option>
+                {% else %}
+                <option value="0">Disco 0</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Tamaño (MB)</label>
+            <input type="number" id="part-size" value="10240" min="100">
+        </div>
+        <div class="form-group">
+            <label>Etiqueta</label>
+            <input type="text" id="part-label" value="NuevaParticion">
+        </div>
+        <div class="form-group">
+            <label>Sistema de Archivos</label>
+            <select id="part-fs">
+                <option value="NTFS">NTFS (recomendado)</option>
+                <option value="FAT32">FAT32</option>
+                <option value="exFAT">exFAT</option>
+                <option value="ReFS">ReFS</option>
+            </select>
+        </div>
+        <button class="btn btn-danger" onclick="createPartition()">
+            <i class="fas fa-plus"></i> Crear Partición
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- JOB CONSOLE -->
+<div class="card mt-2" id="disk-job-card" style="display:none;">
+    <div class="card-title"><i class="fas fa-terminal"></i> Progreso de Tarea</div>
+    <div class="console mt-1" id="disk-console">...</div>
+    <div class="progress-bar mt-1">
+        <div class="progress-fill" id="disk-progress" style="width:0%"></div>
+    </div>
+    <div style="font-size:0.78rem;color:var(--text2);margin-top:0.5rem;" id="disk-status-msg"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function switchTab(t) {
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tab-'+t).classList.add('active');
+    event.target.classList.add('active');
+}
+
+function showDiskJob(msg) {
+    document.getElementById('disk-job-card').style.display = 'block';
+    document.getElementById('disk-console').textContent = msg;
+    document.getElementById('disk-progress').style.width = '0%';
+}
+
+function trackDiskJob(jobId) {
+    showDiskJob('Tarea iniciada...');
+    pollJob(jobId, (job) => {
+        document.getElementById('disk-progress').style.width = '100%';
+        document.getElementById('disk-console').textContent += '\n✓ ' + JSON.stringify(job.result);
+    }, (job) => {
+        document.getElementById('disk-console').textContent += '\n✗ Error: ' + job.error;
+    }, (job) => {
+        document.getElementById('disk-progress').style.width = job.progress + '%';
+        document.getElementById('disk-status-msg').textContent = job.message;
+    });
+}
+
+function cleanDisk(mount) {
+    showModal('Limpiar Disco',
+        `Limpieza segura de archivos temporales en ${mount}. No se eliminarán documentos ni archivos del sistema.`,
+        'CONFIRMAR',
+        async (c) => {
+            const r = await apiCall('/api/disk/clean', 'POST', {mountpoint: mount, confirm: c});
+            trackDiskJob(r.job_id);
+        });
+}
+
+function defragDisk(mount) {
+    showModal('Desfragmentar',
+        `Iniciar desfragmentación de ${mount}. Puede tardar varios minutos.`,
+        'CONFIRMAR',
+        async (c) => {
+            const r = await apiCall('/api/disk/defrag', 'POST', {mountpoint: mount, confirm: c});
+            trackDiskJob(r.job_id);
+        });
+}
+
+function unlockDisk(mount) {
+    const overlay = document.getElementById('global-modal-overlay');
+    const msgEl = document.getElementById('modal-message');
+    const titleEl = document.getElementById('modal-title');
+    const inputC = document.getElementById('modal-confirm-input-container');
+    const inputEl = document.getElementById('modal-confirm-input');
+    const btn = document.getElementById('modal-btn-action');
+
+    titleEl.innerText = `Desbloquear ${mount}`;
+    msgEl.innerText = 'Ingresa contraseña de BitLocker (deja vacío para limpiar ReadOnly):';
+    inputC.style.display = 'block';
+    document.getElementById('confirm-phrase-bold').textContent = 'contraseña o vacío';
+    inputEl.placeholder = 'Contraseña BitLocker (opcional)';
+    inputEl.value = '';
+    overlay.style.display = 'flex';
+
+    btn.onclick = async () => {
+        const password = inputEl.value;
+        closeModal();
+        showDiskJob('Desbloqueando disco...');
+        const r = await apiCall('/api/disk/unlock', 'POST', {mountpoint: mount, password});
+        document.getElementById('disk-job-card').style.display = 'block';
+        document.getElementById('disk-console').textContent = JSON.stringify(r, null, 2);
+    };
+}
+
+function createPartition() {
+    const disk = document.getElementById('part-disk').value;
+    const size = document.getElementById('part-size').value;
+    const label = document.getElementById('part-label').value;
+    const fs = document.getElementById('part-fs').value;
+    showModal('Crear Partición',
+        `Crear partición de ${size} MB en Disco ${disk}. ¡Acción IRREVERSIBLE!`,
+        'CONFIRMAR',
+        async (c) => {
+            const r = await apiCall('/api/disk/create_partition', 'POST', {
+                disk_number: parseInt(disk), size_mb: parseInt(size),
+                label, fs, confirm: c
+            });
+            trackDiskJob(r.job_id);
+        });
+}
+</script>
+{% endblock %}

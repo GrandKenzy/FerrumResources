@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+data/jobs.jsonl
+data/spv_report_*.json
+cache/

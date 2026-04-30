@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block page_title %}Configuración de Sistema{% endblock %}
+
+{% block content %}
+<div class="grid grid-2" style="align-items:flex-start;">
+    <!-- Wallpaper -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-image"></i> Cambiar Fondo de Pantalla</div>
+        <p style="font-size:0.85rem; color:var(--text2); margin-bottom:1rem;">Aplica una imagen como fondo de escritorio de Windows.</p>
+        
+        <div class="form-group">
+            <label>Ruta absoluta de la imagen (.jpg, .png, .bmp)</label>
+            <input type="text" id="wallpaper-path" placeholder="C:\Ruta\a\la\imagen.jpg">
+        </div>
+        <button class="btn btn-primary w-full mt-1" onclick="changeWallpaper()"><i class="fas fa-desktop"></i> Aplicar Fondo</button>
+    </div>
+
+    <!-- Password -->
+    <div class="card" style="border-top:3px solid var(--danger);">
+        <div class="card-title text-danger"><i class="fas fa-key"></i> Cambiar Contraseña de Usuario</div>
+        <p style="font-size:0.85rem; color:var(--text2); margin-bottom:1rem;">Cambia la contraseña de cualquier usuario local. <strong class="text-danger">Requiere Modo Admin (Power).</strong></p>
+        
+        <div class="form-group">
+            <label>Nombre de Usuario</label>
+            <input type="text" id="pass-user" placeholder="Ej: Administrador">
+        </div>
+        <div class="form-group">
+            <label>Nueva Contraseña</label>
+            <input type="password" id="pass-new" placeholder="Escribe la nueva contraseña">
+        </div>
+        
+        {% if power_enabled %}
+        <button class="btn btn-danger w-full mt-1" onclick="changePassword()"><i class="fas fa-lock"></i> Forzar Cambio</button>
+        {% else %}
+        <button class="btn w-full mt-1" disabled><i class="fas fa-shield-halved"></i> Requiere Modo Poder</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Windows Update -->
+<div class="card mt-2">
+    <div class="card-title"><i class="fas fa-arrows-rotate"></i> Windows Update y Actualización a Windows 11</div>
+    <div class="grid grid-2 mt-1" style="gap:1rem; align-items:center;">
+        <div>
+            <div id="win11-status" style="font-size:0.9rem; margin-bottom:0.5rem;"><i class="fas fa-spinner fa-spin"></i> Comprobando estado...</div>
+            <a id="win11-link" href="#" target="_blank" class="btn btn-sm btn-primary" style="display:none;"><i class="fas fa-download"></i> Descargar Asistente de Windows 11</a>
+        </div>
+        <div style="text-align:right;">
+            <button class="btn" onclick="openWindowsUpdate()"><i class="fas fa-cog"></i> Abrir Configuración de Windows Update</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function changeWallpaper() {
+    const path = document.getElementById('wallpaper-path').value.trim();
+    if(!path) return showToast('Ingresa la ruta de la imagen', 'warning');
+    
+    const r = await apiCall('/api/system/wallpaper', 'POST', {path: path});
+    if(r.ok) showToast(r.message, 'success');
+    else showToast(r.error, 'error');
+}
+
+async function changePassword() {
+    const user = document.getElementById('pass-user').value.trim();
+    const psw = document.getElementById('pass-new').value;
+    if(!user || !psw) return showToast('Completa todos los campos', 'warning');
+    
+    showModal('Cambio de Contraseña', `¿Estás seguro de cambiar la contraseña de ${user}?`, 'CONFIRMAR', async (c) => {
+        const r = await apiCall('/api/system/password', 'POST', {username: user, password: psw, confirm: c});
+        if(r.ok) showToast(r.message, 'success');
+        else showToast(r.error, 'error');
+    });
+}
+
+async function checkWin11() {
+    const r = await apiCall('/api/system/win11');
+    const s = document.getElementById('win11-status');
+    const l = document.getElementById('win11-link');
+    
+    s.innerHTML = `<i class="fas fa-info-circle text-accent"></i> ${r.message}`;
+    if(r.assistant_url) {
+        l.href = r.assistant_url;
+        l.style.display = 'inline-flex';
+    }
+}
+
+async function openWindowsUpdate() {
+    const r = await apiCall('/api/system/update', 'POST');
+    if(r.ok) showToast(r.message, 'info');
+}
+
+checkWin11();
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 5057,
+    "refresh_interval_ms": 3000
+  },
+  "security": {
+    "vt_api_key": "",
+    "enable_power_actions": true,
+    "enable_power_actions_ui_visible": true,
+    "require_confirm_phrase": false,
+    "session_timeout_minutes": 60,
+    "allow_kill_process": true,
+    "allow_disk_optimize": true,
+    "allow_desktop_cleaner": true,
+    "allow_port_terminate": true
+  },
+  "cleanup": {
+    "clean_temp_min_age_hours": 24,
+    "desktop_junk_min_age_days": 7,
+    "max_cleanup_size_mb": 500,
+    "quarantine_retention_days": 30,
+    "auto_empty_quarantine": false
+  },
+  "processes": {
+    "high_cpu_threshold": 70,
+    "high_ram_threshold": 80,
+    "high_disk_io_threshold_mb": 50,
+    "high_connections_threshold": 50,
+    "suspicious_score_threshold": 50,
+    "sustained_usage_seconds": 15
+  },
+  "ports": {
+    "default_port_range_start": 3000,
+    "default_port_range_end": 9000,
+    "preferred_ports": [
+      3000,
+      5000,
+      5173,
+      8000,
+      8080
+    ],
+    "auto_open_browser": true,
+    "enable_os_notifications": true
+  },
+  "ui": {
+    "theme": "light",
+    "density": "comfortable",
+    "auto_refresh": true,
+    "show_advanced_metrics": true,
+    "chart_history_seconds": 60
+  }
+}
